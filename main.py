@@ -36,6 +36,10 @@ def validate(text: str) -> None:
         problems.append("entry is empty")
     if not text.strip():
         problems.append("entry is only whitespace")
+    if text != text.strip():
+        problems.append("entry must not have leading or trailing white space")
+    if text.startswith("\ufeff"):
+        problems.append("entry must not start with a byte-order mark")
     if len(text) > MAX_CHARS:
         problems.append(
             f"entry is {len(text)} characters, over the {MAX_CHARS} limit"
@@ -54,7 +58,20 @@ def main() -> None:
     data = text.encode("utf-8")
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_PATH.write_bytes(data)
-    print(f"wrote {OUTPUT_PATH}: {len(text)} chars, {len(data)} bytes")
+    written = OUTPUT_PATH.read_bytes()
+    if written != data:
+        print(
+            f"verify failed: {OUTPUT_PATH} holds {len(written)} bytes, "
+            f"expected {len(data)}",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
+    import hashlib
+
+    print(
+        f"wrote {OUTPUT_PATH}: {len(text)} chars, {len(data)} bytes, "
+        f"sha256 {hashlib.sha256(data).hexdigest()}"
+    )
 
 
 if __name__ == "__main__":
